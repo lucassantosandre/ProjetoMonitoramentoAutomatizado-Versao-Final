@@ -1,0 +1,55 @@
+- name: Criando grupo de usuario do node_exporter
+  group: name="{{groupId}}"
+  become: true
+
+- name: Criando o usuario do node_exporter
+  user:
+    name: "{{userId}}"
+    group: "{{groupId}}"
+    system: yes
+    shell: "/sbin/nologin"
+    comment: "{{userId}} nologin User"
+    createhome: "no"
+    state: present
+
+- name: Instalando node_exporter ( esperamos que nao demore muito... *_* )
+  unarchive:
+    src: "https://github.com/prometheus/node_exporter/releases/download/v{{ version }}/node_exporter-{{ version }}.linux-amd64.tar.gz"
+    dest: /tmp/
+    remote_src: yes
+
+- name: Copiando arquivo node_exporter para o bin
+  copy:
+    src: "/tmp/node_exporter-{{ version }}.linux-amd64/node_exporter"
+    dest: "/usr/local/bin/node_exporter"
+    owner: "{{userId}}"
+    group: "{{groupId}}"
+    remote_src: yes
+    mode: 0755
+
+- name: Deletando o arquivo node_exporter no /tmp
+  file:
+    path: '/tmp/node_exporter-{{ version }}.linux-amd64'
+    state: absent
+
+- name: Arquivo de configuracao do Docker
+  template:
+    src: docker_metrics.conf.j2
+    dest: /etc/docker/daemon.json
+
+- name: Configurando node_exporter como um servico no linux
+  template:
+    src: init.service.j2
+    dest: /etc/systemd/system/node_exporter.service
+
+- name: Iniciando o servico do node_exporter
+  service:
+    name: node_exporter
+    state: started
+    enabled: yes
+
+- name: Verificando se o node_exporter esta acessivel
+  uri:
+    url: http://127.0.0.1:9100/metrics
+    method: GET
+    status_code: 200

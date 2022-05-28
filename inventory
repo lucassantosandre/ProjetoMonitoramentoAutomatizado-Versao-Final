@@ -1,0 +1,8 @@
+[prometheus]
+127.0.0.1 ansible_user=root
+
+[node_exporter]
+127.0.0.1 ansible_user=root
+
+[grafana]
+127.0.0.1 ansible_user=root
